@@ -84,14 +84,15 @@ class SpectralConv2D(tf.keras.layers.Conv2D):
             t_k = tf.transpose(self.k, self.transpose_order) 
             k = tf.reshape(t_k, (t_k.shape[0], -1))
 
-            new_v = tf.linalg.matvec(k, self.u)
-            new_u = tf.linalg.matvec(tf.transpose(k), self.v)
+            new_v = l2normalize(tf.linalg.matvec(k, self.u))
+            new_u = l2normalize(tf.linalg.matvec(tf.transpose(k), self.v))
             
-            sigma = tf.multiply(new_u, tf.linalg.matvec(tf.transpose(k), new_v))
-            sigma = tf.reshape(tf.stack([tf.reshape(sigma, (-1,))] * t_k.shape[0]), t_k.shape)
-            new_kernel = tf.divide(self.k, tf.transpose(sigma, self.detranspose_order))
+        # sigma = tf.multiply(new_u, tf.linalg.matvec(tf.transpose(k), new_v))
+        sigma = l2normalize(tf.multiply(new_u, tf.linalg.matvec(tf.transpose(k), new_v)))
+        sigma = tf.reshape(tf.stack([tf.reshape(sigma, (-1,))] * t_k.shape[0]), t_k.shape)
+        new_kernel = tf.divide(self.k, tf.transpose(sigma, self.detranspose_order))
 
-            return new_v, new_u, new_kernel
+        return new_v, new_u, new_kernel
 
 
     def call(self, inputs):
