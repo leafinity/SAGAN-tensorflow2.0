@@ -28,7 +28,7 @@ class L2normalizedRandomNormal(tf.initializers.RandomNormal):
 
 
 class SpectralConv2D(tf.keras.layers.Conv2D):
-    """docstring for SpectralConv2D"""
+
     def __init__(self, filters, kernel_size, power_iterations=1, **kwargs):
         super(SpectralConv2D, self).__init__(filters, kernel_size, **kwargs)
         self.power_iterations = power_iterations
@@ -62,13 +62,13 @@ class SpectralConv2D(tf.keras.layers.Conv2D):
             kernel_shape = self._get_kernel_shape(input_dim)
 
             self.v = self.add_weight(self.name + '_v',
-                shape=[input_dim, 1], 
+                shape=[input_dim], 
                 initializer=L2normalizedRandomNormal,
                 trainable=False
             )
 
             self.u = self.add_weight(self.name + '_u',
-                shape=[reduce(lambda x, y: x*y, self.kernel_size + (self.filters,)), 1],
+                shape=[reduce(lambda x, y: x*y, self.kernel_size + (self.filters,))],
                 initializer=L2normalizedRandomNormal,
                 trainable=False
             )
@@ -84,10 +84,10 @@ class SpectralConv2D(tf.keras.layers.Conv2D):
             t_k = tf.transpose(self.k, self.transpose_order) 
             k = tf.reshape(t_k, (t_k.shape[0], -1))
 
-            new_v = tf.matmul(k, self.u)
-            new_u = tf.matmul(tf.transpose(k), self.v)
+            new_v = tf.linalg.matvec(k, self.u)
+            new_u = tf.linalg.matvec(tf.transpose(k), self.v)
             
-            sigma = tf.multiply(new_u, tf.matmul(tf.transpose(k), new_v))
+            sigma = tf.multiply(new_u, tf.linalg.matvec(tf.transpose(k), new_v))
             sigma = tf.reshape(tf.stack([tf.reshape(sigma, (-1,))] * t_k.shape[0]), t_k.shape)
             new_kernel = tf.divide(self.k, tf.transpose(sigma, self.detranspose_order))
 
@@ -110,7 +110,6 @@ class SpectralConv2D(tf.keras.layers.Conv2D):
 
 
 class SpectralConv2DTranspose(SpectralConv2D, tf.keras.layers.Conv2DTranspose):
-    """docstring for SpectralConv2D"""
     
     def __init__(self, filters, kernel_size, power_iterations=1, **kwargs):
         super(SpectralConv2DTranspose, self).__init__(filters, kernel_size, power_iterations=1, **kwargs)
