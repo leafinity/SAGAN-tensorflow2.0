@@ -17,7 +17,7 @@ class CopyWeight(tf.initializers.Initializer):
         return tf.identity(self.weight)
 
 
-class L2normalizedRandomNormal(tf.initializers.RandomNormal):
+class L2normalizedRandomNormal(tf.initializers.TruncatedNormal):
     
     def __init__(self, seed=None):
         super(L2normalizedRandomNormal, self).__init__(mean=0.0, stddev=1.0, seed=seed)
@@ -28,13 +28,11 @@ class L2normalizedRandomNormal(tf.initializers.RandomNormal):
 
 
 class SpectralConv2D(tf.keras.layers.Conv2D):
-
+    """docstring for SpectralConv2D"""
     def __init__(self, filters, kernel_size, power_iterations=1, **kwargs):
-        super(SpectralConv2D, self).__init__(filters, kernel_size, **kwargs)
+        super(SpectralConv2D, self).__init__(filters, kernel_size, kernel_initializer='TruncatedNormal', **kwargs)
         self.power_iterations = power_iterations
-        self.transpose_order = [2, 0, 1, 3]
-        self.detranspose_order = [self.transpose_order.index(i) for i in range(len(self.transpose_order))]
-
+    
     def _made_params(self):
         try:
             v = getattr(self, 'v')
@@ -61,38 +59,29 @@ class SpectralConv2D(tf.keras.layers.Conv2D):
             input_dim = int(input_shape[channel_axis])
             kernel_shape = self._get_kernel_shape(input_dim)
 
-            self.v = self.add_weight(self.name + '_v',
-                shape=[input_dim], 
+            self.u = self.add_weight(self.name + '_v',
+                shape=[self.filters, 1], 
                 initializer=L2normalizedRandomNormal,
                 trainable=False
             )
 
-            self.u = self.add_weight(self.name + '_u',
-                shape=[reduce(lambda x, y: x*y, self.kernel_size + (self.filters,))],
+            self.v = self.add_weight(self.name + '_u',
+                shape=[self.kernel_size[0] * self.kernel_size[1] * input_dim, 1],
                 initializer=L2normalizedRandomNormal,
                 trainable=False
             )
-
-            self.k = self.add_weight(self.name + '_k',
-                shape=kernel_shape,
-                initializer=CopyWeight(self.kernel)
-            )
-            print(self.v.shape, self.u.shape, self.k.shape, self.kernel.shape)
 
     def compute_spectral_norm(self):
         for _ in range(self.power_iterations):
-            t_k = tf.transpose(self.k, self.transpose_order) 
-            k = tf.reshape(t_k, (t_k.shape[0], -1))
+            k = tf.reshape(self.kernel, (-1, self.filters))
 
-            new_v = l2normalize(tf.linalg.matvec(k, self.u))
-            new_u = l2normalize(tf.linalg.matvec(tf.transpose(k), self.v))
+            new_v = l2normalize(tf.matmul(k, self.u))
+            new_u = l2normalize(tf.matmul(tf.transpose(k), self.v))
             
-        # sigma = tf.multiply(new_u, tf.linalg.matvec(tf.transpose(k), new_v))
-        sigma = l2normalize(tf.multiply(new_u, tf.linalg.matvec(tf.transpose(k), new_v)))
-        sigma = tf.reshape(tf.stack([tf.reshape(sigma, (-1,))] * t_k.shape[0]), t_k.shape)
-        new_kernel = tf.divide(self.k, tf.transpose(sigma, self.detranspose_order))
+        sigma = tf.matmul(tf.matmul(tf.transpose(new_v), k), new_u)
+        new_kernel = tf.divide(self.kernel, sigma)
 
-        return new_v, new_u, new_kernel
+        return new_v, new_u, self.kernel
 
 
     def call(self, inputs):
@@ -114,9 +103,7 @@ class SpectralConv2DTranspose(SpectralConv2D, tf.keras.layers.Conv2DTranspose):
     
     def __init__(self, filters, kernel_size, power_iterations=1, **kwargs):
         super(SpectralConv2DTranspose, self).__init__(filters, kernel_size, power_iterations=1, **kwargs)
-        self.transpose_order = [3, 0, 1, 2]
-        self.detranspose_order = [self.transpose_order.index(i) for i in range(len(self.transpose_order))]
-        
+
     def _get_kernel_shape(self, input_dim):
         return self.kernel_size + (self.filters, input_dim)
     
