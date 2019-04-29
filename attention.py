@@ -78,4 +78,4 @@ class _Attention(tf.keras.layers.Layer):
             out = tf.reshape(
                 tf.transpose(out, (0, 2, 1)), (batchsize, height, width, -1))
         
-        return tf.add(tf.multiply(out, self.gamma), origin_input)
+        return tf.add(tf.multiply(out, self.gamma), origin_input), attention
