@@ -14,6 +14,7 @@ the results will show in `./results`.
 
 ## Reference
 [pytorch implementation](https://github.com/heykeetae/Self-Attention-GAN)
+
 [Tensorflow-1.0 implementation](https://github.com/taki0112/Self-Attention-GAN-Tensorflow)
 
 ## Contributors
