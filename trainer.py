@@ -1,5 +1,5 @@
+import os
 import time
-import glob
 import cv2
 import tensorflow as tf
 import numpy as np
@@ -21,11 +21,12 @@ class Trainer(object):
         self.log_dir = config.log_dir
         self.sample_dir = config.sample_dir
         self.img_size = config.img_size
+        self.z_dim = config.z_dim
 
         # initial models
         self.g = create_generator(
             image_size=self.img_size,
-            z_dim=config.z_dim,
+            z_dim=self.z_dim,
             filters=config.g_conv_filters,
             kernel_size=config.g_conv_kernel_size)
 
@@ -58,7 +59,12 @@ class Trainer(object):
         return tf.reduce_mean(y_true * y_pred)
 
     def get_data_generator(self):
-        images = glob.glob(self.image_path)
+        images = []
+        for root, dirname, filenames in os.walk(self.image_path):
+            images += [os.path.join([dirname, f]) for f in filenames]
+
+        print(images)
+
         self.nbatch = int(np.ceil(len(images)/self.batch_size))
 
         def data_generator(self):
@@ -148,8 +154,8 @@ class Trainer(object):
 
             for i in range(self.nbatch):
                 z = tf.random.truncated_normal(shape=(self.batch_size, self.z_dim), dtype=tf.float32)
-                d_loss, gp_loss = train_discriminator_step(next(self.data_generator), z)
-                g_loss = train_generator_step(z)
+                d_loss, gp_loss = self.train_discriminator_step(next(self.data_generator), z)
+                g_loss = self.train_generator_step(z)
 
             if (epoch % self.print_freq) == 0:
                 print('epoch {}/{} ({:.2f} sec):, d_loss {:.4f}, gp_loss {:.4f}, g_loss {:.4f}'.format([
