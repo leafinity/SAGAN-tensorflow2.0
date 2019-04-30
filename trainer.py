@@ -1,16 +1,14 @@
 import time
 import glob
 import tensorflow as tf
-from sagan import create_generator, create_discriminator
+import numpy as np
+from sagan_models import create_generator, create_discriminator
 
 class Trainer(object):
     
     def __init__(self, config):
         super(Trainer, self).__init__()
-
-        self.train = config.train
         self.epoch = config.epoch
-        self.iteration = config.iteration
         self.batch_size = config.batch_size
         self.print_freq = config.print_freq
         self.save_freq = config.save_freq
@@ -35,30 +33,30 @@ class Trainer(object):
             kernel_size=config.d_conv_kernel_size)
 
         # initial optimizers
-        self.g_opt = tf.optimizer.get(config.g_opt)
-        if self.g_opt is tf.optimizer.Adam:
-            self.g_opt = self.g_opt(learning_rate=self.g_lr, beta_1=self.beta1, beta_2=self.beta2)
-        else:
-            self.g_opt = self.g_opt(learning_rate=self.g_lr)
+        self.g_opt = tf.optimizers.get(config.g_opt)
+        self.g_opt.learning_rate = config.g_lr
+        if isinstance(self.g_opt, tf.optimizers.Adam):
+            self.g_opt.beta_1=config.beta1
+            self.g_opt.beta_2=config.beta2
 
-        self.d_opt = tf.optimizer.get(config.d_opt)
-        if self.d_opt is tf.optimizer.Adam:
-            print('adam')
-            self.d_opt = self.g_opt(learning_rate=self.g_lr, beta_1=self.beta1, beta_2=self.beta2)
-        else:
-            self.d_opt = self.g_opt(learning_rate=self.g_lr)
+        self.d_opt = tf.optimizers.get(config.d_opt)
+        self.d_opt.learning_rate = config.d_lr
+        if isinstance(self.g_opt, tf.optimizers.Adam):
+            self.d_opt.beta_1=config.beta1
+            self.d_opt.beta_2=config.beta2
 
-        if self.load_model:
-            config.load_model() # TODO
+        if config.load_model:
+            self.load_model()
 
-    def data_generator():
-        images = glob.glob(config.image_path)
-
-
+    @staticmethod
     def w_loss(y_true, y_pred):
         return tf.reduce_mean(y_true * y_pred)
 
-    def gradient_penalty(real, fake):
+    def data_generator(self):
+        images = glob.glob(config.image_path)
+        self.nbatch = int(np.ceil(len(images)/self.batch_size))
+
+    def gradient_penalty(self, real, fake):
         alpha = tf.random.uniform(shape=[len(real), 1, 1, 1], minval=0., maxval=1.)
         interpolated = alpha * real + (1 - alpha) * fake
     
@@ -71,13 +69,16 @@ class Trainer(object):
 
         return self.gpl * tf.reduce_mean(tf.square(grad_norm - 1.))
 
-    def save_models():
+    def load_models(self):
         pass
 
-    def save_samples():
+    def save_models(self):
         pass
 
-    def train_discriminator_step(real_img, noise_z):
+    def save_samples(self):
+        pass
+
+    def train_discriminator_step(self, real_img, noise_z):
         with tf.GradientTape() as tape_d:
 
             fake_img  = self.g(noise_z, training=False)
@@ -99,7 +100,7 @@ class Trainer(object):
         
         return total_loss, gp
 
-    def train_generator_step(noise_z):
+    def train_generator_step(self, noise_z):
         with tf.GradientTape() as tape_g:
             fake_img  = G(noise_z, training=True)
             fake_pred = D(fake_img, training=False)
@@ -111,7 +112,7 @@ class Trainer(object):
         
         return g_loss
 
-    def train():
+    def train(self):
         print("Start Training")
         print('epoch: {}'.format(self.epoch))
         
@@ -135,7 +136,7 @@ class Trainer(object):
                 # z = tf.random.truncated_normal(shape=(self.sample_num, self.z_dim), dtype=tf.float32)
                 # self.save_samples(self.g(z))
 
-    def test():
+    def test(self):
         z = tf.random.truncated_normal(shape=(self.sample_num, self.z_dim), dtype=tf.float32)
         # self.save_samples(self.g(z), path=self.result_dir)
         pass

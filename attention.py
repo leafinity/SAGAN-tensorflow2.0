@@ -6,13 +6,13 @@ class SelfAttnModel(tf.keras.Model):
     def __init__(self, input_dims, data_format='channels_last', **kwargs):
         super(SelfAttnModel, self).__init__(**kwargs)
         self.attn = _Attention(data_format=data_format)
-        self.query_conv = layers.Conv2D(filters=input_dims//8,
+        self.query_conv = tf.keras.layers.Conv2D(filters=input_dims//8,
                                         kernel_size=1,
                                         data_format=data_format)
-        self.key_conv = layers.Conv2D(filters=input_dims//8,
+        self.key_conv = tf.keras.layers.Conv2D(filters=input_dims//8,
                                       kernel_size=1,
                                       data_format=data_format)
-        self.value_conv = layers.Conv2D(filters=input_dims,
+        self.value_conv = tf.keras.layers.Conv2D(filters=input_dims,
                                         kernel_size=1,
                                         data_format=data_format)
     

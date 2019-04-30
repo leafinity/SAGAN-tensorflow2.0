@@ -8,11 +8,10 @@ def parse_args():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--train', type=str2bool, default=False)
+    parser.add_argument('--train', action='store_true', default=False)
 
-    parser.add_argument('--epoch', type=int, default=10, help='The number of epochs to run')
-    parser.add_argument('--iteration', type=int, default=10000, help='The number of training iterations')
-    parser.add_argument('--batch_size', type=int, default=32, help='The size of batch per gpu')
+    parser.add_argument('--epoch', type=int, default=10000, help='The number of epochs to run')
+    parser.add_argument('--batch_size', type=int, default=16, help='The size of batch per gpu')
     parser.add_argument('--print_freq', type=int, default=500, help='The number of image_print_freqy')
     parser.add_argument('--save_freq', type=int, default=500, help='The number of ckpt_save_freq')
 
@@ -25,13 +24,13 @@ def parse_args():
     parser.add_argument('--gpl', type=float, default=10.0, help='The gradient penalty lambda')
 
     parser.add_argument('--z_dim', type=int, default=128, help='Dimension of noise vector')
-    parser.add_argument('--img_size', type=int, default=128, help='The size of image')
-    parser.add_argument('--sample_num', type=int, default=64, help='The number of sample images')
+    parser.add_argument('--img_size', type=int, default=64, help='The size of image')
+    parser.add_argument('--sample_num', type=int, default=16, help='The number of sample images')
 
-    parser.add_argument('--g_conv_filters', type=int, default=64, help='basic filter num for generator')
-    parser.add_argument('--g_conv_kernel_size', type=int, default=64, help='basic kernel size for generator')
-    parser.add_argument('--d_conv_filters', type=int, default=64, help='basic filter num for disciminator')
-    parser.add_argument('--d_conv_kernel_size', type=int, default=64, help='basic kernel size for disciminator')
+    parser.add_argument('--g_conv_filters', type=int, default=16, help='basic filter num for generator')
+    parser.add_argument('--g_conv_kernel_size', type=int, default=16, help='basic kernel size for generator')
+    parser.add_argument('--d_conv_filters', type=int, default=16, help='basic filter num for disciminator')
+    parser.add_argument('--d_conv_kernel_size', type=int, default=16, help='basic kernel size for disciminator')
 
     parser.add_argument('--load_model', type=int, default=None, help='the pretrained model path')
 
@@ -50,7 +49,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    trainer = Trainer(config)
+    trainer = Trainer(args)
 
     if args.train:
         trainer.train()
