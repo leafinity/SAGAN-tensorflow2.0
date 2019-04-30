@@ -1,5 +1,6 @@
 import time
 import glob
+import cv2
 import tensorflow as tf
 import numpy as np
 from sagan_models import create_generator, create_discriminator
@@ -19,16 +20,17 @@ class Trainer(object):
         self.result_dir = config.result_dir
         self.log_dir = config.log_dir
         self.sample_dir = config.sample_dir
+        self.img_size = config.img_size
 
         # initial models
         self.g = create_generator(
-            image_size=config.img_size,
+            image_size=self.img_size,
             z_dim=config.z_dim,
             filters=config.g_conv_filters,
             kernel_size=config.g_conv_kernel_size)
 
         self.d = create_discriminator(
-            image_size=config.img_size,
+            image_size=self.img_size,
             filters=config.d_conv_filters,
             kernel_size=config.d_conv_kernel_size)
 
@@ -48,13 +50,38 @@ class Trainer(object):
         if config.load_model:
             self.load_model()
 
+        self.data_generator = self.get_data_generator()
+
+
     @staticmethod
     def w_loss(y_true, y_pred):
         return tf.reduce_mean(y_true * y_pred)
 
-    def data_generator(self):
-        images = glob.glob(config.image_path)
+    def get_data_generator(self):
+        images = glob.glob(self.image_path)
         self.nbatch = int(np.ceil(len(images)/self.batch_size))
+
+        def data_generator(self):
+            idxes = np.arange(len(images))
+            np.random.suffle(idxes)
+
+            while True:
+                for i in range(nbatch):
+                    data = np.empty((nbatch, self.img_size, self.img_size, 3))
+                    batch_imgs = images[i*self.batch_size, (i+1)*self.batch_size]
+
+                    if len(batch_imgs) <= self.batch_size:
+                        batch_imgs += images[:batch_size-len(batch_imgs)]
+                    
+                    for j, path in enumerate():
+                        img = cv.imread(path)
+                        img = cv2.resize(img, (64, 64))
+                        img = img[:, :, ::-1]
+                        data[j] = (img.astype(np.float32) / 127) - 1
+                    
+                    yield data
+
+        return data_generator
 
     def gradient_penalty(self, real, fake):
         alpha = tf.random.uniform(shape=[len(real), 1, 1, 1], minval=0., maxval=1.)
