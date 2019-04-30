@@ -4,11 +4,11 @@ Tensorflow-2.0 implementation of ["Self-Attention Generative Adversarial Network
 
 * train
 
-    python main.py --train
+        python main.py --train
 
 * generate
     
-    python main.py
+        python main.py
 
 the results will show in `./results`.
 
