@@ -2,6 +2,7 @@ import os
 import time
 import tensorflow as tf
 import numpy as np
+import cv2
 from sagan_models import create_generator, create_discriminator
 from data_generator import DataGenerator
 
@@ -10,18 +11,21 @@ class Trainer(object):
     def __init__(self, config):
         super(Trainer, self).__init__()
         self.epoch = config.epoch
+        self.epoch_start = 0
         self.batch_size = config.batch_size
         self.print_freq = config.print_freq
         self.save_freq = config.save_freq
         self.gpl = config.gpl
         self.sample_num = config.sample_num
-        self.image_path = config.image_path
+        self.data_path = config.data_path
         self.checkpoint_dir = config.checkpoint_dir
         self.result_dir = config.result_dir
         self.log_dir = config.log_dir
         self.sample_dir = config.sample_dir
         self.image_size = config.image_size
         self.z_dim = config.z_dim
+        self.g_pretrained_model = config.g_pretrained_model
+        self.d_pretrained_model = config.d_pretrained_model
 
         # initial models
         self.g = create_generator(
@@ -48,8 +52,10 @@ class Trainer(object):
             self.d_opt.beta_1=config.beta1
             self.d_opt.beta_2=config.beta2
 
-        if config.load_model:
-            self.load_model()
+        if config.restore_model:
+            self.restore_model()
+        else:
+            self.load_pretrained_model()
 
         self.data_generator = self.get_data_generator()
 
@@ -73,7 +79,7 @@ class Trainer(object):
 
     def get_data_generator(self):
         images = []
-        for dirname, dirnames, filenames in os.walk(self.image_path):
+        for dirname, dirnames, filenames in os.walk(self.data_path):
             images += [os.path.join(dirname, f) for f in filenames]
 
         self.nbatch = int(np.ceil(len(images) / self.batch_size))
@@ -81,14 +87,38 @@ class Trainer(object):
                             image_size=self.image_size,
                             batch_size=self.batch_size)
 
-    def load_models(self):
-        pass
+    def load_pretrained_model(self):
+        if self.g_pretrained_model:
+            self.g.load_weights(self.g_pretrained_model) 
+        if self.d_pretrained_model:
+            self.d.load_weights(self.d_pretrained_model)
 
-    def save_models(self):
-        pass
+    def restore_model(self):
+        g_latest = tf.train.latest_checkpoint(os.path.join(self.checkpoint_dir, 'g'))
+        self.g.load_weights(g_latest)
+        d_latest = tf.train.latest_checkpoint(os.path.join(self.checkpoint_dir, 'd'))
+        self.d.load_weights(d_latest)
 
-    def save_samples(self):
-        pass
+        self.epoch_start = int(g_latest.split('/')[-1][3:].split('.')[0])
+
+    def save_models(self, epoch):
+        self.g.save_weights(os.path.join(self.checkpoint_dir, 'g', 'cp-{:06d}.ckpt'.format(epoch)))
+        self.d.save_weights(os.path.join(self.checkpoint_dir, 'd', 'cp-{:06d}.ckpt'.format(epoch))) 
+
+    def sample(self):
+        z = tf.random.truncated_normal(shape=(self.sample_num, self.z_dim), dtype=tf.float32)
+        return self.g(z)[0].numpy()
+
+    def save_samples(self, epoch):
+        if not os.path.exists(self.sample_dir):
+            os.makedirs(self.sample_dir)
+
+        img = np.reshape(self.sample(), (-1, self.image_size, 3))
+
+        cv2.imwrite(
+            os.path.join(self.sample_dir, 'sp-{:06d}.jpg'.format(epoch)),
+            ((img + 1) * 127).astype(np.uint8)
+        )
 
     def train_discriminator_step(self, real_img, noise_z):
         with tf.GradientTape() as tape_d:
@@ -127,8 +157,8 @@ class Trainer(object):
         print("Start Training")
         print('epoch: {}'.format(self.epoch))
         
-        for epoch in range(self.epoch):
-            epoch_start = time.time()
+        for epoch in range(self.epoch_start, self.epoch_start + self.epoch):
+            epoch_start_time = time.time()
 
             for i in range(self.nbatch):
                 z = tf.random.truncated_normal(shape=(self.batch_size, self.z_dim), dtype=tf.float32)
@@ -137,17 +167,22 @@ class Trainer(object):
 
             if (epoch % self.print_freq) == 0:
                 print('epoch {}/{} ({:.2f} sec):, d_loss {:.4f}, gp_loss {:.4f}, g_loss {:.4f}'.format(
-                    epoch, self.epoch, 
-                    time.time() - epoch_start,
+                    epoch, self.epoch_start + self.epoch,
+                    time.time() - epoch_start_time,
                     d_loss.numpy(), gp_loss.numpy(), g_loss.numpy()))
 
-            if (epoch % self.save_freq):
-                self.save_models()
-
-                # z = tf.random.truncated_normal(shape=(self.sample_num, self.z_dim), dtype=tf.float32)
-                # self.save_samples(self.g(z))
+            if (epoch % self.save_freq) == 0:
+                self.save_models(epoch)
+                self.save_samples(epoch)
 
     def test(self):
-        z = tf.random.truncated_normal(shape=(self.sample_num, self.z_dim), dtype=tf.float32)
-        # self.save_samples(self.g(z), path=self.result_dir)
-        pass
+        sameples = self.sample()
+
+        if not os.path.exists(self.result_dir):
+            os.makedirs(self.result_dir)
+
+        for i, s in enumerate(sameples):
+            cv2.imwrite(
+                os.path.join(self.result_dir, 'reult-{:03d}.jpg'.format(i)),
+                ((s[:, :, ::-1] + 1) * 127).astype(np.uint8)
+            )

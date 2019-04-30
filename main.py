@@ -32,9 +32,11 @@ def parse_args():
     parser.add_argument('--d_conv_filters', type=int, default=16, help='basic filter num for disciminator')
     parser.add_argument('--d_conv_kernel_size', type=int, default=4, help='basic kernel size for disciminator')
 
-    parser.add_argument('--load_model', type=int, default=None, help='the pretrained model path')
+    parser.add_argument('--restore_model', action='store_true', default=False, help='the latest model weights')
+    parser.add_argument('--g_pretrained_model', type=str, default=None, help='path of the pretrained model')
+    parser.add_argument('--d_pretrained_model', type=str, default=None, help='path of the pretrained model')
 
-    parser.add_argument('--image_path', type=str, default='./data')
+    parser.add_argument('--data_path', type=str, default='./data')
 
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoint',
                         help='Directory name to save the checkpoints')
