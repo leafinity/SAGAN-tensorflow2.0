@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument('--gpl', type=float, default=10.0, help='The gradient penalty lambda')
 
     parser.add_argument('--z_dim', type=int, default=128, help='Dimension of noise vector')
-    parser.add_argument('--img_size', type=int, default=64, help='The size of image')
+    parser.add_argument('--image_size', type=int, default=64, help='The size of image')
     parser.add_argument('--sample_num', type=int, default=16, help='The number of sample images')
 
     parser.add_argument('--g_conv_filters', type=int, default=16, help='basic filter num for generator')
