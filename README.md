@@ -6,3 +6,7 @@ Tensorflow-2.0 implementation of ["Self-Attention Generative Adversarial Network
 
 ## Reference
 [pytorch implementation](https://github.com/heykeetae/Self-Attention-GAN)
+[Tensorflow-1.0 implementation](https://github.com/taki0112/Self-Attention-GAN-Tensorflow)
+
+## Contributors
+trainer.py contributed by [Kinna](https://github.com/KinnaChen)
