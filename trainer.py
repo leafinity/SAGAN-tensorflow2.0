@@ -60,34 +60,29 @@ class Trainer(object):
 
     def get_data_generator(self):
         images = []
-        for root, dirname, filenames in os.walk(self.image_path):
-            images += [os.path.join([dirname, f]) for f in filenames]
-
-        print(images)
+        for dirname, dirnames, filenames in os.walk(self.image_path):
+            images += [os.path.join(dirname, f) for f in filenames]
 
         self.nbatch = int(np.ceil(len(images)/self.batch_size))
 
-        def data_generator(self):
+        def data_generator(nbatch):
+            data = np.empty((self.batch_size, self.img_size, self.img_size, 3))
             idxes = np.arange(len(images))
-            np.random.suffle(idxes)
-
             while True:
+                np.random.shuffle(idxes)
+                
                 for i in range(nbatch):
-                    data = np.empty((nbatch, self.img_size, self.img_size, 3))
-                    batch_imgs = images[i*self.batch_size, (i+1)*self.batch_size]
-
-                    if len(batch_imgs) <= self.batch_size:
-                        batch_imgs += images[:batch_size-len(batch_imgs)]
-                    
-                    for j, path in enumerate():
-                        img = cv.imread(path)
+                    batch_imgs = images[i * self.batch_size:(i + 1) * self.batch_size]
+                    if len(batch_imgs) < self.batch_size:
+                        batch_imgs += images[:self.batch_size - len(batch_imgs)]
+                    for j, path in enumerate(batch_imgs):
+                        img = cv2.imread(path)
                         img = cv2.resize(img, (64, 64))
                         img = img[:, :, ::-1]
-                        data[j] = (img.astype(np.float32) / 127) - 1
-                    
-                    yield data
+                        data[j] = (img / 127.) - 1
+                    yield data.astype(np.float32)
 
-        return data_generator
+        return data_generator(self.nbatch)
 
     def gradient_penalty(self, real, fake):
         alpha = tf.random.uniform(shape=[len(real), 1, 1, 1], minval=0., maxval=1.)
@@ -114,15 +109,17 @@ class Trainer(object):
     def train_discriminator_step(self, real_img, noise_z):
         with tf.GradientTape() as tape_d:
 
-            fake_img  = self.g(noise_z, training=False)
+            fake_img, g_attn1, g_attn2  = self.g(noise_z, training=False)
+            real_pred, r_attn1, r_attn2 = self.d(real_img, training=True)
+            fake_pred, f_attn1, f_attn2 = self.d(fake_img, training=True)
 
-            real_pred = self.d(real_img, training=True)
-            fake_pred = self.d(fake_img, training=True)
-            
+            print('-------------', 'real', real_img.shape, 'fake', fake_img.shape)            
+            print('-------------', 'real', real_pred.shape, 'fake', fake_pred.shape)
+
             y_true = tf.ones(shape=tf.shape(real_pred), dtype=tf.float32)
 
-            real_loss = self.w_loss(-y_true, real)
-            fake_loss = self.w_loss(sy_true, fake)
+            real_loss = self.w_loss(-y_true, real_pred)
+            fake_loss = self.w_loss( y_true, fake_pred)
 
             gp = gradient_penalty(real_img, fake_img)
             
@@ -135,10 +132,10 @@ class Trainer(object):
 
     def train_generator_step(self, noise_z):
         with tf.GradientTape() as tape_g:
-            fake_img  = G(noise_z, training=True)
-            fake_pred = D(fake_img, training=False)
+            fake_img, g_att1, g_att2  = G(noise_z, training=True)
+            fake_pred, d_att1, d_att2 = D(fake_img, training=False)
 
-            g_loss = self.w_loss(fake_pred, -tf.ones(shape=tf.shape(real), dtype=tf.float32))
+            g_loss = self.w_loss(fake_pred, -tf.ones(shape=tf.shape(fake_pred), dtype=tf.float32))
 
             gradients = tape_g.gradient(g_loss, G.trainable_variables)
             self.g_opt.apply_gradients(zip(gradients, G.trainable_variables))
@@ -154,7 +151,7 @@ class Trainer(object):
 
             for i in range(self.nbatch):
                 z = tf.random.truncated_normal(shape=(self.batch_size, self.z_dim), dtype=tf.float32)
-                d_loss, gp_loss = self.train_discriminator_step(next(self.data_generator), z)
+                d_loss, gp_loss = self.train_discriminator_step(self.data_generator.__next__(), z)
                 g_loss = self.train_generator_step(z)
 
             if (epoch % self.print_freq) == 0:
@@ -173,6 +170,3 @@ class Trainer(object):
         z = tf.random.truncated_normal(shape=(self.sample_num, self.z_dim), dtype=tf.float32)
         # self.save_samples(self.g(z), path=self.result_dir)
         pass
-
-
-

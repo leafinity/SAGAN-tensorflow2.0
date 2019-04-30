@@ -15,9 +15,10 @@ def create_generator(image_size=64, z_dim=100, filters=64, kernel_size=4):
 
     for i in range(3):
         curr_filters = curr_filters // 2
+        strides = 4 if i == 0 else 2
         x = SpectralConv2DTranspose(filters=curr_filters,
                                     kernel_size=kernel_size,
-                                    strides=2, 
+                                    strides=strides, 
                                     padding='same')(x)
         x = tf.keras.layers.BatchNormalization()(x)
         x = tf.keras.layers.ReLU()(x)
