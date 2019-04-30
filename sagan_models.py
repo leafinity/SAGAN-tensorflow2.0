@@ -15,10 +15,9 @@ def create_generator(image_size=64, z_dim=100, filters=64, kernel_size=4):
 
     for i in range(3):
         curr_filters = curr_filters // 2
-        strides = 4 if i == 0 else 2
         x = SpectralConv2DTranspose(filters=curr_filters,
                                     kernel_size=kernel_size,
-                                    strides=strides, 
+                                    strides=2, 
                                     padding='same')(x)
         x = tf.keras.layers.BatchNormalization()(x)
         x = tf.keras.layers.ReLU()(x)
@@ -52,10 +51,9 @@ def create_discriminator(image_size=64, filters=64, kernel_size=4):
     x = input_layers
     for i in range(3):
         curr_filters = curr_filters * 2
-        strides = 4 if i == 0 else 2
         x = SpectralConv2D(filters=curr_filters,
                            kernel_size=kernel_size,
-                           strides=strides,
+                           strides=2,
                            padding='same')(x)
         x = tf.keras.layers.LeakyReLU(alpha=0.1)(x)
         
@@ -72,10 +70,7 @@ def create_discriminator(image_size=64, filters=64, kernel_size=4):
             
     x, attn2 = SelfAttnModel(curr_filters)(x)
 
-    x = SpectralConv2D(filters=1,
-                        kernel_size=kernel_size,
-                        strides=2,
-                        padding='same')(x)
+    x = SpectralConv2D(filters=1, kernel_size=4)(x)
     x = tf.keras.layers.Flatten()(x)
 
     return tf.keras.models.Model(input_layers, [x, attn1, attn2])

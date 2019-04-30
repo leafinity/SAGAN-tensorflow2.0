@@ -28,9 +28,9 @@ def parse_args():
     parser.add_argument('--sample_num', type=int, default=16, help='The number of sample images')
 
     parser.add_argument('--g_conv_filters', type=int, default=16, help='basic filter num for generator')
-    parser.add_argument('--g_conv_kernel_size', type=int, default=16, help='basic kernel size for generator')
+    parser.add_argument('--g_conv_kernel_size', type=int, default=4, help='basic kernel size for generator')
     parser.add_argument('--d_conv_filters', type=int, default=16, help='basic filter num for disciminator')
-    parser.add_argument('--d_conv_kernel_size', type=int, default=16, help='basic kernel size for disciminator')
+    parser.add_argument('--d_conv_kernel_size', type=int, default=4, help='basic kernel size for disciminator')
 
     parser.add_argument('--load_model', type=int, default=None, help='the pretrained model path')
 
