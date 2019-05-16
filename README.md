@@ -12,6 +12,10 @@ Tensorflow-2.0 implementation of ["Self-Attention Generative Adversarial Network
 
 the results will show in `./results`.
 
+## Results
+
+![result](sa_result.jpg)
+
 ## Reference
 [pytorch implementation](https://github.com/heykeetae/Self-Attention-GAN)
 
