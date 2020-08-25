@@ -81,7 +81,7 @@ class SpectralConv2D(tf.keras.layers.Conv2D):
         sigma = tf.matmul(tf.matmul(tf.transpose(new_v), k), new_u)
         new_kernel = tf.divide(self.kernel, sigma)
 
-        return new_v, new_u, self.kernel
+        return new_v, new_u, new_kernel
 
 
     def call(self, inputs):
